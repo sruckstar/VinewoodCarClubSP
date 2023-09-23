@@ -140,10 +140,10 @@ public class Vinewood : Script
         position[7] = new Vector3(1197.278f, -3257.556f, -50.00f);
         position[8] = new Vector3(1193.278f, -3257.556f, -50.00f);
 
-        position[9] = new Vector3(1218.465f, -3234.697f, 4.52875f); //вход маркер
-        position[10] = new Vector3(1212.767f, -3252.277f, -49.99775f); //выход маркер
+        position[9] = new Vector3(1218.465f, -3234.697f, 4.52875f); 
+        position[10] = new Vector3(1212.767f, -3252.277f, -49.99775f);
 
-        position[11] = new Vector3(1182.436f, -3252.979f, -50.00f); //призовой транспорт (9)
+        position[11] = new Vector3(1182.436f, -3252.979f, -50.00f);
 
         club = Function.Call<Blip>(GTA.Native.Hash.ADD_BLIP_FOR_COORD, position[9].X, position[9].Y, position[9].Z);
         GTA.Native.Function.Call(GTA.Native.Hash.SET_BLIP_SPRITE, club, 857);
