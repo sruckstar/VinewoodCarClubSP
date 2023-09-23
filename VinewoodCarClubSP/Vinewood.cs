@@ -23,6 +23,9 @@ public class Vinewood : Script
     int sprite = 838;
     int entered = 0;
 
+    static string path = @".\scripts\VineWoodClubCars.ini";
+    ScriptSettings config = ScriptSettings.Load(path);
+
     public Vinewood()
     {
         Tick += OnTick;
@@ -33,46 +36,45 @@ public class Vinewood : Script
         Function.Call(Hash.REQUEST_IPL, "m23_1_garage");
         LoadGarage();
 
-        veh_name[0] = "seminole2";
+        veh_name[0] = config.GetValue<string>("CAR_1", "model", "seminole2");
+        veh_livery[0] = config.GetValue<int>("CAR_1", "livery", 9);
         veh_heading[0] = 157.819f;
-        veh_livery[0] = 9;
 
-        veh_name[1] = "hakuchou2";
+        veh_name[1] = config.GetValue<string>("CAR_2", "model", "hakuchou2");
+        veh_livery[1] = config.GetValue<int>("CAR_2", "livery", 2);
         veh_heading[1] = 157.819f;
-        veh_livery[1] = 2;
 
-        veh_name[2] = "stingertt";
+        veh_name[2] = config.GetValue<string>("CAR_3", "model", "stingertt");
+        veh_livery[2] = config.GetValue<int>("CAR_3", "livery", 8);
         veh_heading[2] = 157.819f;
-        veh_livery[2] = 8;
 
-        veh_name[3] = "le7b";
+        veh_name[3] = config.GetValue<string>("CAR_4", "model", "le7b");
+        veh_livery[3] = config.GetValue<int>("CAR_4", "livery", 1);
         veh_heading[3] = 157.819f;
-        veh_livery[3] = 1;
 
-        veh_name[4] = "ratel";
+        veh_name[4] = config.GetValue<string>("CAR_5", "model", "ratel");
+        veh_livery[4] = config.GetValue<int>("CAR_5", "livery", 6);
         veh_heading[4] = 157.819f;
-        veh_livery[4] = 6;
 
-
-        veh_name[5] = "vigero2";
+        veh_name[5] = config.GetValue<string>("CAR_6", "model", "vigero2");
+        veh_livery[5] = config.GetValue<int>("CAR_6", "livery", 7);
         veh_heading[5] = 52.89205f;
-        veh_livery[5] = 7;
 
-        veh_name[6] = "deveste";
+        veh_name[6] = config.GetValue<string>("CAR_7", "model", "deveste");
+        veh_livery[6] = config.GetValue<int>("CAR_7", "livery", 0);
         veh_heading[6] = 52.89205f;
-        veh_livery[6] = 0;
 
-        veh_name[7] = "cypher";
+        veh_name[7] = config.GetValue<string>("CAR_8", "model", "cypher");
+        veh_livery[7] = config.GetValue<int>("CAR_8", "livery", 14);
         veh_heading[7] = 52.89205f;
-        veh_livery[7] = 14;
 
-        veh_name[8] = "feltzer3";
+        veh_name[8] = config.GetValue<string>("CAR_9", "model", "feltzer3");
+        veh_livery[8] = config.GetValue<int>("CAR_9", "livery", 19);
         veh_heading[8] = 52.89205f;
-        veh_livery[8] = 19;
 
-        veh_name[9] = "monstrociti";
+        veh_name[9] = config.GetValue<string>("CAR_PRIZE", "model", "monstrociti");
+        veh_livery[9] = config.GetValue<int>("CAR_PRIZE", "livery", 3);
         veh_heading[9] = 318.1288f;
-        veh_livery[9] = 3;
 
         ped_name[0] = "A_F_Y_CarClub_01";
         anim_dict[0] = "anim@amb@carmeet@checkout_car@female_b@base";

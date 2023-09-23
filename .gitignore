@@ -23,3 +23,5 @@ VinewoodCarClubSP/obj/Release/TestNewNatives.csproj.FileListAbsolute.txt
 VinewoodCarClubSP/Properties/AssemblyInfo.cs
 .vs/VinewoodCarClubSP/v15/.suo
 *.lock
+*.CopyComplete
+*.txt
