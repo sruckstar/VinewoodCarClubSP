@@ -172,7 +172,6 @@ public class Vinewood : Script
             Function.Call(GTA.Native.Hash.FREEZE_ENTITY_POSITION, ped[i], true);
             x = i;
         }
-        GTA.UI.Screen.ShowSubtitle("Peds " + x, 5000);
     }
 
     private void DeletePeds(int count)
@@ -285,7 +284,7 @@ public class Vinewood : Script
                 Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 24, false);
                 Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 37, false);
                 Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 199, false);
-                Function.Call(Hash.DO_SCREEN_FADE_IN, 1000);
+               Function.Call(Hash.DO_SCREEN_FADE_IN, 1000);
                 entered = 0;
             }
             else
