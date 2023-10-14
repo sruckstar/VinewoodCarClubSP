@@ -1,17 +1,29 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
+using System.Collections.Generic;
 using GTA;
 using GTA.Native;
 using GTA.Math;
+using LemonUI;
+using LemonUI.Menus;
+using LemonUI.Elements;
+using LemonUI.Extensions;
 
 public class Vinewood : Script
 {
     Vehicle[] veh = new Vehicle[10];
     Ped[] ped = new Ped[9];
-    Vector3[] position = new Vector3[12];
+
+    Vector3[] position = new Vector3[13];
     Vector3[] ped_position = new Vector3[9];
     float[] ped_heading = new float[9];
+    NativeMenu menu;
+    NativeMenu[] EditMenu = new NativeMenu[10];
+    NativeSubmenuItem[] car_model = new NativeSubmenuItem[10];
+    NativeListItem<string> SubvehName;
+    NativeListItem<int> SubvehLivery;
+    NativeItem SubvehDelete;
 
     String[] veh_name = new string[10];
     String[] ped_name = new string[9];
@@ -19,12 +31,21 @@ public class Vinewood : Script
     String[] anim_dict = new string[9];
     float[] veh_heading = new float[10];
     int[] veh_livery = new int[10];
+    Blip[] debug_peds = new Blip[9];
     Blip club;
+    Blip prize;
+    Blip GarageKeys;
     int sprite = 838;
     int entered = 0;
+    int mainMenuCreated = 0;
+    int stateMainMenu = -1;
+    int confirm = -1;
+    int BadgeLocked;
+    Camera cumera;
 
     static string path = @".\scripts\VineWoodClubCars.ini";
     ScriptSettings config = ScriptSettings.Load(path);
+    private static readonly ObjectPool pool = new ObjectPool();
 
     public Vinewood()
     {
@@ -33,55 +54,30 @@ public class Vinewood : Script
         Function.Call(Hash.ON_ENTER_MP);
         Function.Call(Hash.SET_INSTANCE_PRIORITY_MODE, 1);
 
+        menu = new NativeMenu("Vinewood Car Club");
+        CreateMainMenu();
+
         Function.Call(Hash.REQUEST_IPL, "m23_1_garage");
         LoadGarage();
 
-        veh_name[0] = config.GetValue<string>("CAR_1", "model", "seminole2");
-        veh_livery[0] = config.GetValue<int>("CAR_1", "livery", 9);
-        veh_heading[0] = 157.819f;
+        pool.Add(menu);
 
-        veh_name[1] = config.GetValue<string>("CAR_2", "model", "hakuchou2");
-        veh_livery[1] = config.GetValue<int>("CAR_2", "livery", 2);
-        veh_heading[1] = 157.819f;
-
-        veh_name[2] = config.GetValue<string>("CAR_3", "model", "stingertt");
-        veh_livery[2] = config.GetValue<int>("CAR_3", "livery", 8);
-        veh_heading[2] = 157.819f;
-
-        veh_name[3] = config.GetValue<string>("CAR_4", "model", "le7b");
-        veh_livery[3] = config.GetValue<int>("CAR_4", "livery", 1);
-        veh_heading[3] = 157.819f;
-
-        veh_name[4] = config.GetValue<string>("CAR_5", "model", "ratel");
-        veh_livery[4] = config.GetValue<int>("CAR_5", "livery", 6);
-        veh_heading[4] = 157.819f;
-
-        veh_name[5] = config.GetValue<string>("CAR_6", "model", "vigero2");
-        veh_livery[5] = config.GetValue<int>("CAR_6", "livery", 7);
-        veh_heading[5] = 52.89205f;
-
-        veh_name[6] = config.GetValue<string>("CAR_7", "model", "deveste");
-        veh_livery[6] = config.GetValue<int>("CAR_7", "livery", 0);
-        veh_heading[6] = 52.89205f;
-
-        veh_name[7] = config.GetValue<string>("CAR_8", "model", "cypher");
-        veh_livery[7] = config.GetValue<int>("CAR_8", "livery", 14);
-        veh_heading[7] = 52.89205f;
-
-        veh_name[8] = config.GetValue<string>("CAR_9", "model", "feltzer3");
-        veh_livery[8] = config.GetValue<int>("CAR_9", "livery", 19);
-        veh_heading[8] = 52.89205f;
-
-        veh_name[9] = config.GetValue<string>("CAR_PRIZE", "model", "monstrociti");
-        veh_livery[9] = config.GetValue<int>("CAR_PRIZE", "livery", 3);
-        veh_heading[9] = 318.1288f;
+        veh_heading[0] = 318.1288f;
+        veh_heading[1] = -144.9848f;
+        veh_heading[2] = -161.2509f;
+        veh_heading[3] = -176.253f;
+        veh_heading[4] = 178.2071f;
+        veh_heading[5] = 164.4194f;
+        veh_heading[6] = -4.000244f;
+        veh_heading[7] = -4.035083f;
+        veh_heading[8] = -2.826211f;
+        veh_heading[9] = 1.158939f;
 
         ped_name[0] = "A_F_Y_CarClub_01";
         anim_dict[0] = "anim@amb@carmeet@checkout_car@female_b@base";
         anim_name[0] = "base";
         ped_position[0] = new Vector3(1206.819f, -3248.682f, -50.00f);
         ped_heading[0] = 43.86293f;
-
 
         ped_name[1] = "A_M_Y_CarClub_01";
         anim_dict[1] = "anim@amb@carmeet@checkout_car@male_a@base";
@@ -131,25 +127,255 @@ public class Vinewood : Script
         ped_position[8] = new Vector3(1203.26f, -3255.629f, -50.00f);
         ped_heading[8] = 226.9537f;
 
+        position[0] = new Vector3(1182.436f, -3252.979f, -50.00f); //prize veh
+        position[1] = new Vector3(1192.5f, -3249.51f, -50.70123f);
+        position[2] = new Vector3(1195.515f, -3248.417f, -50.70127f);
+        position[3] = new Vector3(1198.6f, -3247.779f, -50.70224f);
+        position[4] = new Vector3(1201.851f, -3247.727f, -50.70224f);
+        position[5] = new Vector3(1205.24f, -3247.87f, -50.70234f);
+        position[6] = new Vector3(1204f, -3257.981f, -50.6998f);
+        position[7] = new Vector3(1200.251f, -3257.721f, -50.70198f);
+        position[8] = new Vector3(1196.536f, -3257.526f, -50.70204f);
+        position[9] = new Vector3(1192.206f, -3257.731f, -50.70211f);
+        //enter exit markers
+        position[10] = new Vector3(1218.465f, -3234.697f, 4.52875f); 
+        position[11] = new Vector3(1212.767f, -3252.277f, -49.99775f);
+        //edit garage
+        position[12] = new Vector3(1211.326f, -3258.668f, -49.99775f);
 
-        position[0] = new Vector3(1210.22f, -3247.852f, -50.00f);
-        position[1] = new Vector3(1206.22f, -3247.852f, -50.00f);
-        position[2] = new Vector3(1202.22f, -3247.852f, -50.00f);
-        position[3] = new Vector3(1198.22f, -3247.852f, -50.00f);
-        position[4] = new Vector3(1194.22f, -3247.852f, -50.00f);
-        position[5] = new Vector3(1205.278f, -3257.556f, -50.00f);
-        position[6] = new Vector3(1201.278f, -3257.556f, -50.00f);
-        position[7] = new Vector3(1197.278f, -3257.556f, -50.00f);
-        position[8] = new Vector3(1193.278f, -3257.556f, -50.00f);
+        
 
-        position[9] = new Vector3(1218.465f, -3234.697f, 4.52875f); 
-        position[10] = new Vector3(1212.767f, -3252.277f, -49.99775f);
-
-        position[11] = new Vector3(1182.436f, -3252.979f, -50.00f);
-
-        club = Function.Call<Blip>(GTA.Native.Hash.ADD_BLIP_FOR_COORD, position[9].X, position[9].Y, position[9].Z);
+        club = Function.Call<Blip>(GTA.Native.Hash.ADD_BLIP_FOR_COORD, position[10].X, position[10].Y, position[10].Z);
         GTA.Native.Function.Call(GTA.Native.Hash.SET_BLIP_SPRITE, club, 857);
 
+    }
+
+    private void CreateMainMenu()
+    {
+        string car_ini;
+        string label_text;
+        string VehName;
+        VehicleHash model_hash;
+
+        for (int i = 0; i <= 9; i++)
+        {
+            car_ini = $"CAR_{i}";
+            string tempVeh = config.GetValue<string>(car_ini, "model", "Empty");
+            int tempLivery = config.GetValue<int>(car_ini, "livery", -1);
+
+            if (tempVeh != "Empty")
+            {
+                model_hash = Function.Call<VehicleHash>(Hash.GET_HASH_KEY, tempVeh);
+                label_text = Function.Call<string>(Hash.GET_DISPLAY_NAME_FROM_VEHICLE_MODEL, model_hash);
+                VehName = Game.GetLocalizedString(label_text);
+            }
+            else
+            {
+                VehName = "Empty";
+            }
+
+            EditMenu[i] = new NativeMenu("Edit Vehicle");
+            NativeListItem<string> itemA = new NativeListItem<string>("Model:", "", tempVeh);
+            NativeListItem<int> itemB = new NativeListItem<int>("Livery ID:", "", tempLivery);
+            NativeItem itemC = new NativeItem("Delete Vehicle");
+
+            BadgeSet shop_lock = new BadgeSet
+            {
+                NormalDictionary = "commonmenu",
+                NormalTexture = "shop_lock",
+                HoveredDictionary = "commonmenu",
+                HoveredTexture = "shop_lock"
+            };
+
+            if (tempVeh == "Empty")
+            {
+                itemC.RightBadgeSet = shop_lock;
+            }
+
+            EditMenu[i].Add(itemA);
+            itemA.Activated += (sender, args) =>
+            {
+                Function.Call(Hash.DISPLAY_ONSCREEN_KEYBOARD, false, "FMMC_KEY_TIP", "", "", "", "", "", 16);
+
+                while(true)
+                {
+                    Script.Wait(0);
+                    string result = Function.Call<string>(Hash.GET_ONSCREEN_KEYBOARD_RESULT);
+                    int state = Function.Call<int>(Hash.UPDATE_ONSCREEN_KEYBOARD);
+                    if (result != null && state == 1)
+                    {
+                        model_hash = Function.Call<VehicleHash>(Hash.GET_HASH_KEY, result);
+                        if (Function.Call<bool>(Hash.IS_THIS_MODEL_A_CAR, model_hash))
+                        {
+                            car_ini = $"CAR_{stateMainMenu}";
+                            config.SetValue(car_ini, "model", result);
+                            config.Save();
+                            tempLivery = config.GetValue<int>(car_ini, "livery", -1);
+                            var model_list = new List<string>() { result };
+                            itemA.Items = model_list;
+                            VehName = Game.GetLocalizedString(result);
+                            car_model[stateMainMenu].Title = VehName;
+
+                            if(veh[stateMainMenu] != null)
+                            {
+                                veh[stateMainMenu].Delete();
+                            }
+
+                            var veh_model = new Model(Function.Call<VehicleHash>(Hash.GET_HASH_KEY, result));
+                            veh[stateMainMenu] = World.CreateVehicle(veh_model, position[stateMainMenu], veh_heading[stateMainMenu]);
+                            while (!veh_model.IsLoaded) Script.Wait(100);
+
+                            GTA.Native.Function.Call(GTA.Native.Hash.SET_VEHICLE_ON_GROUND_PROPERLY, veh[stateMainMenu]);
+                            Function.Call(GTA.Native.Hash.SET_VEHICLE_MOD_KIT, veh[stateMainMenu], 0);
+                            Function.Call(GTA.Native.Hash.SET_VEHICLE_MOD, veh[stateMainMenu], 48, tempLivery, false);
+                            Wait(100);
+                            Function.Call(GTA.Native.Hash.FREEZE_ENTITY_POSITION, veh[stateMainMenu], true);
+                            veh_model.MarkAsNoLongerNeeded();
+                            itemC.RightBadgeSet = null;
+                            CreatePedsAdvanced(stateMainMenu);
+                            break;
+                        }
+                        else
+                        {
+                            GTA.UI.Screen.ShowSubtitle("Incorrect model name!");
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        state = Function.Call<int>(Hash.UPDATE_ONSCREEN_KEYBOARD);
+                        if (state == -1 || state == 2)
+                        {
+                            //Exit from the on screen keyboard
+                            break;
+                        }
+                    }
+                }
+            };
+
+           EditMenu[i].Add(itemB);
+           itemB.Activated += (sender, args) =>
+           {
+               Function.Call(Hash.DISPLAY_ONSCREEN_KEYBOARD, false, "FMMC_KEY_TIP", "", "", "", "", "", 16);
+
+               while (true)
+               {
+                   Script.Wait(0);
+                   string result = Function.Call<string>(Hash.GET_ONSCREEN_KEYBOARD_RESULT);
+                   int state = Function.Call<int>(Hash.UPDATE_ONSCREEN_KEYBOARD);
+                   if (result != null && state == 1)
+                   {
+                       bool isNumeric = int.TryParse(result, out int livertID);
+                       if (isNumeric)
+                       {
+                           Function.Call(GTA.Native.Hash.SET_VEHICLE_MOD_KIT, veh[stateMainMenu], 0);
+                           Function.Call(GTA.Native.Hash.SET_VEHICLE_MOD, veh[stateMainMenu], 48, livertID, false);
+                           car_ini = $"CAR_{stateMainMenu}";
+                           config.SetValue(car_ini, "livery", livertID);
+                           config.Save();
+                           var model_list = new List<int>() { livertID };
+                           itemB.Items = model_list;
+                           break;
+                       }
+                       else
+                       {
+                           GTA.UI.Screen.ShowSubtitle("Incorrect value!");
+                           break;
+                       }
+                   }
+                   else
+                   {
+                       state = Function.Call<int>(Hash.UPDATE_ONSCREEN_KEYBOARD);
+                       if (state == -1 || state == 2)
+                       {
+                           //Exit from the on screen keyboard
+                           break;
+                       }
+                   }
+               }
+           };
+
+           EditMenu[i].Add(itemC);
+           itemC.Activated += (sender, args) =>
+           {
+               if (confirm != 1)
+               {
+                   if (veh[stateMainMenu] != null)
+                   {
+                       itemC.Description = "Are you sure?";
+                       EditMenu[stateMainMenu].Visible = true;
+                       confirm = 1;
+                   }
+                   else
+                   {
+                       itemC.Description = "The vehicle has already been removed";
+                       EditMenu[stateMainMenu].Visible = true;
+                       confirm = 1;
+                   }
+               }
+               else
+               {
+                   if (veh[stateMainMenu] != null && confirm == 1)
+                   {
+                       veh[stateMainMenu].Delete();
+                       veh[stateMainMenu] = null;
+                       DeletePedsAdvanced(stateMainMenu);
+                       car_ini = $"CAR_{stateMainMenu}";
+                       config.SetValue(car_ini, "model", "Empty");
+                       config.SetValue(car_ini, "livery", -1);
+                       config.Save();
+                       confirm = -1;
+                       itemC.Description = "";
+                       shop_lock = new BadgeSet
+                       {
+                           NormalDictionary = "commonmenu",
+                           NormalTexture = "shop_lock",
+                           HoveredDictionary = "commonmenu",
+                           HoveredTexture = "shop_lock"
+                       };
+                       itemC.RightBadgeSet = shop_lock;
+                       var model_list = new List<string>() { "Empty" };
+                       itemA.Items = model_list;
+                       EditMenu[stateMainMenu].Visible = false;
+                       List<NativeItem> items = menu.Items;
+                       items[stateMainMenu].Title = "Empty";
+                       menu.Visible = true;
+                   }
+               }
+           };
+
+
+            pool.Add(EditMenu[i]);
+            car_model[i] = menu.AddSubMenu(EditMenu[i]);
+            car_model[i].Title = VehName;
+            car_model[i].Activated += (sender, args) =>
+            {
+                int x = menu.SelectedIndex;
+                EditMenu[x].Visible = true;
+            };
+
+            if (i == 0)
+            {
+                BadgeSet star = new BadgeSet
+                {
+                    NormalDictionary = "commonmenu",
+                    NormalTexture = "shop_new_star",
+                    HoveredDictionary = "commonmenu",
+                    HoveredTexture = "shop_new_star"
+                };
+                car_model[i].LeftBadgeSet = star;
+            }
+        }
+        mainMenuCreated = 1;
+    }
+
+    private void CreateCameraMode()
+    {
+        Hash camHash = Function.Call<Hash>(Hash.GET_HASH_KEY, "DEFAULT_SCRIPTED_CAMERA");
+        cumera = GTA.Native.Function.Call<Camera>(GTA.Native.Hash.CREATE_CAMERA_WITH_PARAMS, camHash, position[11].X, position[11].Y, position[11].Z + 5.0f, 0.0f, 0.0f, 0.0f, 70.0f, true, 2);
+        Function.Call(Hash.SET_CAM_ACTIVE, cumera, true);
+        Function.Call(Hash.POINT_CAM_AT_COORD, cumera, position[0].X, position[0].Y, position[0].Z);
+        Function.Call(Hash.RENDER_SCRIPT_CAMS, true, false, 0, true, false, 0);
     }
 
     private void LoadGarage()
@@ -161,16 +387,160 @@ public class Vinewood : Script
         Function.Call(Hash.REFRESH_INTERIOR, GarageID);
     }
 
-    private void CreatePeds(int count)
+    /*/private void CreatePeds(int count)
     {
         int x = 0;
+        int sprite = 686;
         for (int i = 0; i <= count; i++)
         {
-            var ped_model = new Model(Function.Call<VehicleHash>(Hash.GET_HASH_KEY, ped_name[i]));
-            ped[i] = GTA.World.CreatePed(ped_model, ped_position[i], ped_heading[i]);
-            ped[i].Task.PlayAnimation(anim_dict[i], anim_name[i], 8.0f, -1, GTA.AnimationFlags.Loop);
-            Function.Call(GTA.Native.Hash.FREEZE_ENTITY_POSITION, ped[i], true);
+            string car_ini = $"CAR_{i}";
+            string tempVeh = config.GetValue<string>(car_ini, "model", "Empty");
+            if (ped[i] == null)
+            {
+                var ped_model = new Model(Function.Call<VehicleHash>(Hash.GET_HASH_KEY, ped_name[i]));
+                ped[i] = GTA.World.CreatePed(ped_model, ped_position[i], ped_heading[i]);
+                ped[i].Task.PlayAnimation(anim_dict[i], anim_name[i], 8.0f, -1, GTA.AnimationFlags.Loop);
+                if (ped[i] != null)
+                {
+                    Function.Call(GTA.Native.Hash.FREEZE_ENTITY_POSITION, ped[i], true);
+                }
+            }
+            else
+            {
+                continue;
+            }
+            sprite++;
             x = i;
+        }
+    }/*/
+
+    private void CreatePedsAdvanced(int typegroup)
+    {
+        if (typegroup == 0)
+        {
+            if (ped[3] == null)
+            {
+                var ped_model = new Model(Function.Call<VehicleHash>(Hash.GET_HASH_KEY, ped_name[3]));
+                ped[3] = GTA.World.CreatePed(ped_model, ped_position[3], ped_heading[3]);
+                ped[3].Task.PlayAnimation(anim_dict[3], anim_name[3], 8.0f, -1, GTA.AnimationFlags.Loop);
+                if (ped[3] != null)
+                {
+                    Function.Call(GTA.Native.Hash.FREEZE_ENTITY_POSITION, ped[3], true);
+                }
+            }
+
+            if (ped[4] == null)
+            {
+                var ped_model = new Model(Function.Call<VehicleHash>(Hash.GET_HASH_KEY, ped_name[4]));
+                ped[4] = GTA.World.CreatePed(ped_model, ped_position[4], ped_heading[4]);
+                ped[4].Task.PlayAnimation(anim_dict[4], anim_name[4], 8.0f, -1, GTA.AnimationFlags.Loop);
+                if (ped[4] != null)
+                {
+                    Function.Call(GTA.Native.Hash.FREEZE_ENTITY_POSITION, ped[4], true);
+                }
+            }
+        }
+        else
+        {
+            if (typegroup == 2)
+            {
+                if (ped[0] == null)
+                {
+                    var ped_model = new Model(Function.Call<VehicleHash>(Hash.GET_HASH_KEY, ped_name[0]));
+                    ped[0] = GTA.World.CreatePed(ped_model, ped_position[0], ped_heading[0]);
+                    ped[0].Task.PlayAnimation(anim_dict[0], anim_name[0], 8.0f, -1, GTA.AnimationFlags.Loop);
+                    if (ped[0] != null)
+                    {
+                        Function.Call(GTA.Native.Hash.FREEZE_ENTITY_POSITION, ped[0], true);
+                    }
+                }
+            }
+            else
+            {
+                if (typegroup == 3)
+                {
+                    if (ped[1] == null)
+                    {
+                        var ped_model = new Model(Function.Call<VehicleHash>(Hash.GET_HASH_KEY, ped_name[1]));
+                        ped[1] = GTA.World.CreatePed(ped_model, ped_position[1], ped_heading[1]);
+                        ped[1].Task.PlayAnimation(anim_dict[1], anim_name[1], 8.0f, -1, GTA.AnimationFlags.Loop);
+                        if (ped[1] != null)
+                        {
+                            Function.Call(GTA.Native.Hash.FREEZE_ENTITY_POSITION, ped[1], true);
+                        }
+                    }
+
+                    if (ped[2] == null)
+                    {
+                        var ped_model = new Model(Function.Call<VehicleHash>(Hash.GET_HASH_KEY, ped_name[2]));
+                        ped[2] = GTA.World.CreatePed(ped_model, ped_position[2], ped_heading[2]);
+                        ped[2].Task.PlayAnimation(anim_dict[2], anim_name[2], 8.0f, -1, GTA.AnimationFlags.Loop);
+                        if (ped[2] != null)
+                        {
+                            Function.Call(GTA.Native.Hash.FREEZE_ENTITY_POSITION, ped[2], true);
+                        }
+                    }
+                }
+                else
+                {
+                    if (typegroup == 6)
+                    {
+                        if (ped[7] == null)
+                        {
+                            var ped_model = new Model(Function.Call<VehicleHash>(Hash.GET_HASH_KEY, ped_name[7]));
+                            ped[7] = GTA.World.CreatePed(ped_model, ped_position[7], ped_heading[7]);
+                            ped[7].Task.PlayAnimation(anim_dict[7], anim_name[7], 8.0f, -1, GTA.AnimationFlags.Loop);
+                            if (ped[7] != null)
+                            {
+                                Function.Call(GTA.Native.Hash.FREEZE_ENTITY_POSITION, ped[7], true);
+                            }
+                        }
+
+                        if (ped[8] == null)
+                        {
+                            var ped_model = new Model(Function.Call<VehicleHash>(Hash.GET_HASH_KEY, ped_name[8]));
+                            ped[8] = GTA.World.CreatePed(ped_model, ped_position[8], ped_heading[8]);
+                            ped[8].Task.PlayAnimation(anim_dict[8], anim_name[8], 8.0f, -1, GTA.AnimationFlags.Loop);
+                            if (ped[8] != null)
+                            {
+                                Function.Call(GTA.Native.Hash.FREEZE_ENTITY_POSITION, ped[8], true);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (typegroup == 7)
+                        {
+                            if (ped[6] == null)
+                            {
+                                var ped_model = new Model(Function.Call<VehicleHash>(Hash.GET_HASH_KEY, ped_name[6]));
+                                ped[6] = GTA.World.CreatePed(ped_model, ped_position[6], ped_heading[6]);
+                                ped[6].Task.PlayAnimation(anim_dict[6], anim_name[6], 8.0f, -1, GTA.AnimationFlags.Loop);
+                                if (ped[6] != null)
+                                {
+                                    Function.Call(GTA.Native.Hash.FREEZE_ENTITY_POSITION, ped[6], true);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if (typegroup == 8)
+                            {
+                                if (ped[5] == null)
+                                {
+                                    var ped_model = new Model(Function.Call<VehicleHash>(Hash.GET_HASH_KEY, ped_name[5]));
+                                    ped[5] = GTA.World.CreatePed(ped_model, ped_position[5], ped_heading[5]);
+                                    ped[5].Task.PlayAnimation(anim_dict[5], anim_name[5], 8.0f, -1, GTA.AnimationFlags.Loop);
+                                    if (ped[5] != null)
+                                    {
+                                        Function.Call(GTA.Native.Hash.FREEZE_ENTITY_POSITION, ped[5], true);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -178,7 +548,96 @@ public class Vinewood : Script
     {
         for (int i = 0; i <= count; i++)
         {
-            ped[i].Delete();
+            if (ped[i] != null)
+            {
+                ped[i].Delete();
+                ped[i] = null;
+            }
+        }
+    }
+    
+    private void DeletePedsAdvanced(int typegroup)
+    {
+        if(typegroup == 0)
+        {
+            if (ped[3] != null)
+            {
+                ped[3].Delete();
+                ped[3] = null;
+            }
+
+            if (ped[4] != null)
+            {
+                ped[4].Delete();
+                ped[4] = null;
+            }
+        }
+        else
+        {
+            if(typegroup == 2)
+            {
+                if (ped[0] != null)
+                {
+                    ped[0].Delete();
+                    ped[0] = null;
+                }
+            }
+            else
+            {
+                if (typegroup == 3)
+                {
+                    if (ped[1] != null)
+                    {
+                        ped[1].Delete();
+                        ped[1] = null;
+                    }
+
+                    if (ped[2] != null)
+                    {
+                        ped[2].Delete();
+                        ped[2] = null;
+                    }
+                }
+                else
+                {
+                    if (typegroup == 6)
+                    {
+                        if (ped[7] != null)
+                        {
+                            ped[7].Delete();
+                            ped[7] = null;
+                        }
+
+                        if (ped[8] != null)
+                        {
+                            ped[8].Delete();
+                            ped[8] = null;
+                        }
+                    }
+                    else
+                    {
+                        if (typegroup == 7)
+                        {
+                            if (ped[6] != null)
+                            {
+                                ped[6].Delete();
+                                ped[6] = null;
+                            }
+                        }
+                        else
+                        {
+                            if (typegroup == 8)
+                            {
+                                if (ped[5] != null)
+                                {
+                                    ped[5].Delete();
+                                    ped[5] = null;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -186,64 +645,128 @@ public class Vinewood : Script
     {
         for (int i = 0; i <= count; i++)
         {
-            var veh_model = new Model(Function.Call<VehicleHash>(Hash.GET_HASH_KEY, veh_name[i]));
-            veh[i] = World.CreateVehicle(veh_model, position[i], veh_heading[i]);
-            while (!veh_model.IsLoaded) Script.Wait(100);
+            string car_ini = $"CAR_{i}";
+            string tempVeh = config.GetValue<string>(car_ini, "model", "Empty");
+            int tempLivery = config.GetValue<int>(car_ini, "livery", -1);
 
-            GTA.Native.Function.Call(GTA.Native.Hash.SET_VEHICLE_ON_GROUND_PROPERLY, veh[i]);
-            Function.Call(GTA.Native.Hash.SET_VEHICLE_MOD_KIT, veh[i], 0);
-            Function.Call(GTA.Native.Hash.SET_VEHICLE_MOD, veh[i], 48, veh_livery[i], false);
-            Function.Call(GTA.Native.Hash.FREEZE_ENTITY_POSITION, veh[i], true);
-            veh_model.MarkAsNoLongerNeeded();
+            if (tempVeh != "Empty")
+            {
+                var veh_model = new Model(Function.Call<VehicleHash>(Hash.GET_HASH_KEY, tempVeh));
+                veh[i] = World.CreateVehicle(veh_model, position[i], veh_heading[i]);
+                int time = Game.GameTime;
+                int error = 0;
+
+                while (veh[i] == null)
+                {
+                    Script.Wait(0);
+                    if (Game.GameTime > time + 10000)
+                    {
+                        error = 1;
+                        break;
+                    }
+                }
+
+                if (error == 0)
+                {
+                    GTA.Native.Function.Call(GTA.Native.Hash.SET_VEHICLE_ON_GROUND_PROPERLY, veh[i]);
+                    Function.Call(GTA.Native.Hash.SET_VEHICLE_MOD_KIT, veh[i], 0);
+                    Function.Call(GTA.Native.Hash.SET_VEHICLE_MOD, veh[i], 48, tempLivery, false);
+                    Function.Call(GTA.Native.Hash.FREEZE_ENTITY_POSITION, veh[i], true);
+                    veh_model.MarkAsNoLongerNeeded();
+                    CreatePedsAdvanced(i);
+                }
+                else
+                {
+                    Function.Call(Hash.DO_SCREEN_FADE_IN, 1000);
+                    GTA.UI.Screen.ShowSubtitle("FATAL ERROR: CANT LOAD VEHICLES!", 10000);
+                }
+            }
+            else
+            {
+                veh[i] = null;
+            }
+            
         }
-
-        var prize_veh_model = new Model(Function.Call<VehicleHash>(Hash.GET_HASH_KEY, veh_name[9]));
-
-        veh[9] = World.CreateVehicle(prize_veh_model, position[11], veh_heading[9]);
-
-        while (!prize_veh_model.IsLoaded) Script.Wait(100);
-        Function.Call(GTA.Native.Hash.SET_VEHICLE_MOD_KIT, veh[9], 0);
-        Function.Call(GTA.Native.Hash.SET_VEHICLE_MOD, veh[9], 48, veh_livery[9], false);
-        Function.Call(GTA.Native.Hash.FREEZE_ENTITY_POSITION, veh[9], true);
-        prize_veh_model.MarkAsNoLongerNeeded();
     }
 
     private void DeleteVehicles(int count)
     {
         for (int i = 0; i <= count; i++)
         {
-            if (Function.Call<bool>(Hash.IS_PED_SITTING_IN_VEHICLE, Game.Player.Character, veh[i]))
+            if(veh[i] != null)
             {
-                Vector3 pos = new Vector3(1218.144f, -3226.999f, 5.88975f);
-                Function.Call(GTA.Native.Hash.FREEZE_ENTITY_POSITION, veh[i], false);
-                veh[i].Position = pos;
-                veh[i].Heading = 3.314108f;
-                veh[i].MarkAsNoLongerNeeded();
-            }
-            else
-            {
-                veh[i].Delete();
-                veh[i] = null;
+                if (Function.Call<bool>(Hash.IS_PED_SITTING_IN_VEHICLE, Game.Player.Character, veh[i]))
+                {
+                    Vector3 pos = new Vector3(1218.144f, -3226.999f, 5.88975f);
+                    Function.Call(GTA.Native.Hash.FREEZE_ENTITY_POSITION, veh[i], false);
+                    veh[i].Position = pos;
+                    veh[i].Heading = 3.314108f;
+                    veh[i].MarkAsNoLongerNeeded();
+                }
+                else
+                {
+                    veh[i].Delete();
+                    veh[i] = null;
+                }
             }
         }
-        Function.Call(Hash.CLEAR_AREA_OF_VEHICLES, 1200.00f, -3250.00f, -50.00f, 300.0f, false, false, false, false, false, false);
     }
 
     private void OnTick(object sender, EventArgs e)
     {
-        World.DrawMarker(MarkerType.VerticalCylinder, position[9], Vector3.Zero, Vector3.Zero, new Vector3(1.0f, 1.0f, 1.0f), Color.LightBlue);
+        pool.Process();
+
+        if (menu.Visible)
+        {
+            stateMainMenu = menu.SelectedIndex;
+
+            int x = menu.SelectedIndex;
+            Vector3 mark = new Vector3(position[x].X, position[x].Y, position[x].Z + 3.0f);
+            World.DrawMarker(MarkerType.UpsideDownCone, mark, Vector3.Zero, Vector3.Zero, new Vector3(1.0f, 1.0f, 1.0f), Color.LightBlue);
+        }
+        if (!menu.Visible && mainMenuCreated == 1)
+        {
+            mainMenuCreated = 0;
+        }
+
+        if(confirm == 1 && EditMenu[stateMainMenu].Visible)
+        {
+            int x = EditMenu[stateMainMenu].SelectedIndex;
+            if (x != 2)
+            {
+                confirm = -1;
+                List<NativeItem> items = EditMenu[stateMainMenu].Items;
+                items[2].Description = "";
+            }
+        }
+
+        if (!menu.Visible && cumera != null)
+        {
+            int state = Function.Call<int>(Hash.UPDATE_ONSCREEN_KEYBOARD);
+            if (Function.Call<bool>(Hash.DOES_CAM_EXIST, cumera) && !EditMenu[stateMainMenu].Visible && state != 0)
+            {
+                Function.Call(Hash.DESTROY_CAM, cumera);
+                Function.Call(Hash.RENDER_SCRIPT_CAMS, false, false, 0, true, false, 0);
+                Function.Call(Hash.FREEZE_ENTITY_POSITION, Game.Player.Character, false);
+                cumera = null;
+            }
+        }
+
         World.DrawMarker(MarkerType.VerticalCylinder, position[10], Vector3.Zero, Vector3.Zero, new Vector3(1.0f, 1.0f, 1.0f), Color.LightBlue);
+        World.DrawMarker(MarkerType.VerticalCylinder, position[11], Vector3.Zero, Vector3.Zero, new Vector3(1.0f, 1.0f, 1.0f), Color.LightBlue);
+        World.DrawMarker(MarkerType.VerticalCylinder, position[12], Vector3.Zero, Vector3.Zero, new Vector3(1.0f, 1.0f, 1.0f), Color.LightBlue);
 
         if (entered == 1)
         {
             Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 22, true);
             Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 24, true);
             Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 37, true);
+            Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 45, true);
             Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 199, true);
             Function.Call(GTA.Native.Hash.SET_CURRENT_PED_WEAPON, Game.Player.Character, 2725352035, true); //WEAPON_UNARMED
         }
 
-        if (World.GetDistance(Game.Player.Character.Position, position[9]) < 1.5f)
+        if (World.GetDistance(Game.Player.Character.Position, position[10]) < 1.5f)
         {
             Function.Call(Hash.DO_SCREEN_FADE_OUT, 1000);
             while (Function.Call<bool>(Hash.IS_SCREEN_FADED_OUT) == false) Script.Wait(100);
@@ -252,8 +775,17 @@ public class Vinewood : Script
             Vector3 pos = new Vector3(1210.181f, -3252.594f, -48.99775f);
             Game.Player.Character.Position = pos;
             Game.Player.Character.Heading = 100.7243f;
-            CreateVehicles(8);
-            CreatePeds(8);
+            CreateVehicles(9);
+            //CreatePeds(8);
+
+            if(veh[0] != null)
+            {
+                prize = Function.Call<Blip>(GTA.Native.Hash.ADD_BLIP_FOR_COORD, position[0].X, position[0].Y, position[0].Z);
+                GTA.Native.Function.Call(GTA.Native.Hash.SET_BLIP_SPRITE, prize, 781);
+            }
+            GarageKeys = Function.Call<Blip>(GTA.Native.Hash.ADD_BLIP_FOR_COORD, position[12].X, position[12].Y, position[12].Z);
+            GTA.Native.Function.Call(GTA.Native.Hash.SET_BLIP_SPRITE, GarageKeys, 811);
+            club.Delete();
 
             Wait(1000);
             Function.Call(Hash.DO_SCREEN_FADE_IN, 1000);
@@ -262,7 +794,7 @@ public class Vinewood : Script
         }
         else
         {
-            if (World.GetDistance(Game.Player.Character.Position, position[10]) < 1.5f)
+            if (World.GetDistance(Game.Player.Character.Position, position[11]) < 1.5f)
             {
                 Function.Call(Hash.DO_SCREEN_FADE_OUT, 1000);
                 while (Function.Call<bool>(Hash.IS_SCREEN_FADED_OUT) == false) Script.Wait(100);
@@ -277,12 +809,25 @@ public class Vinewood : Script
                 entered = 0;
                 DeleteVehicles(9);
                 DeletePeds(8);
+                club = Function.Call<Blip>(GTA.Native.Hash.ADD_BLIP_FOR_COORD, position[10].X, position[10].Y, position[10].Z);
+                GTA.Native.Function.Call(GTA.Native.Hash.SET_BLIP_SPRITE, club, 857);
+
+                if (prize != null)
+                {
+                    prize.Delete();
+                }
+
+                if (GarageKeys != null)
+                {
+                    GarageKeys.Delete();
+                }
 
                 Wait(1000);
 
                 Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 22, false);
                 Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 24, false);
                 Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 37, false);
+                Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 45, false);
                 Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 199, false);
                Function.Call(Hash.DO_SCREEN_FADE_IN, 1000);
                 entered = 0;
@@ -291,6 +836,7 @@ public class Vinewood : Script
             {
                 if(Function.Call<bool>(Hash.IS_CONTROL_PRESSED, 0, 71) && Function.Call<bool>(Hash.IS_PED_SITTING_IN_ANY_VEHICLE, Game.Player.Character) && entered == 1)
                 {
+                    Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 23, true);
                     Function.Call(Hash.DO_SCREEN_FADE_OUT, 1000);
                     while (Function.Call<bool>(Hash.IS_SCREEN_FADED_OUT) == false) Script.Wait(100);
                     Wait(1000);
@@ -301,9 +847,29 @@ public class Vinewood : Script
                     Wait(1000);
                     Function.Call(Hash.DO_SCREEN_FADE_IN, 1000);
                     Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 22, false);
+                    Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 23, true);
                     Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 24, false);
                     Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 37, false);
+                    Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 45, false);
                     Function.Call(Hash.DISABLE_CONTROL_ACTION, 0, 199, false);
+                }
+                else
+                {
+                    if(World.GetDistance(Game.Player.Character.Position, position[12]) < 1.5f && Function.Call<bool>(Hash.IS_CONTROL_PRESSED, 0, 38) && cumera == null)
+                    {
+                        Function.Call(Hash.DESTROY_MOBILE_PHONE);
+                        Function.Call(Hash.CLEAR_PED_TASKS_IMMEDIATELY, Game.Player.Character);
+                        Function.Call(Hash.FREEZE_ENTITY_POSITION, Game.Player.Character, true);
+                        CreateCameraMode();
+                        menu.Visible = true;
+                    }
+                    else
+                    {
+                        if (World.GetDistance(Game.Player.Character.Position, position[12]) < 1.5f && cumera == null)
+                        {
+                            GTA.UI.Screen.ShowHelpTextThisFrame("Press ~INPUT_PICKUP~ to open the garage control menu.");
+                        }
+                    }
                 }
             }
         }
