@@ -1,0 +1,1 @@
+pariah,8,entity2,-1,thrax,-1,xa21,-1,toreador,-1,ignus,-1,astron,-1,krieger,-1,oppressor,-1,deluxo,-1
