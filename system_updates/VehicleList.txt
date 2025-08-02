@@ -2,6 +2,9 @@ adder,111,111
 infernus,23,120,0
 t20,27,5,2
 cheetah,86,110
-// Comment test
-// osiris,38,0,-1
+osiris,38,0,-1
 entityxf,32,146,1
+arbitergt, 1, 1, 5
+ignus, 2, 2, 6
+tampa4, 6, 5, 3
+opressor2, 1, 1, -1
