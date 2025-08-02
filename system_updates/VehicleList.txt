@@ -1,4 +1,4 @@
-adder,111,111
+scramjet,55,55,5
 infernus,23,120,0
 t20,27,5,2
 cheetah,86,110
