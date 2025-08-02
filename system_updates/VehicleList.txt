@@ -1,0 +1,7 @@
+adder,111,111
+infernus,23,120,0
+t20,27,5,2
+cheetah,86,110
+// Comment test
+// osiris,38,0,-1
+entityxf,32,146,1
