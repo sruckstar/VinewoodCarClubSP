@@ -1,10 +1,10 @@
-scramjet,55,55,5
-infernus,23,120,0
-t20,27,5,2
-cheetah,86,110
-osiris,38,0,-1
-entityxf,32,146,1
-arbitergt, 1, 1, 5
-ignus, 2, 2, 6
-tampa4, 6, 5, 3
+scramjet, 55, 55, 5
+oppressor, 0, 0, -1
+ignus, 131, 131, 5
+l352, 135, 135, 9
+cheetah3, 0, 0, 0 
+hardy,42,42,9
+tenf, 51, 51, 0
+virtue, 37, 37, 8
+openwheel2, 67, 67, 4
 buffalo5,70,27,3
