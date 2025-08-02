@@ -7,4 +7,4 @@ entityxf,32,146,1
 arbitergt, 1, 1, 5
 ignus, 2, 2, 6
 tampa4, 6, 5, 3
-opressor2, 1, 1, -1
+oppressor2, 1, 1, -1
